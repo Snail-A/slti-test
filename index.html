@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLTI 安全素养类型测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 95%;
+            max-width: 768px;
+            background: white;
+            padding: 2.5rem;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn-primary {
+            background-color: #10b981;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #059669;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+        .btn-secondary:hover {
+            background-color: #d1d5db;
+            transform: translateY(-2px);
+        }
+        .option-card {
+            background-color: #f9fafb;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+        .option-card:hover {
+            transform: translateY(-2px);
+            border-color: #10b981;
+        }
+        .option-card.selected {
+            background-color: #d1fae5;
+            border-color: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div id="app" class="container">
+    <div id="start-page" class="text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-green-600 mb-4">SLTI 安全素养类型测试</h1>
+        <p class="text-lg md:text-xl text-gray-700 mb-6">解锁你的安全 DNA，了解你是哪种安全角色。</p>
+        <button id="start-btn" class="btn btn-primary text-xl px-8 py-3">开始测试</button>
+    </div>
+
+    <div id="test-page" class="hidden">
+        <div class="mb-6">
+            <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-green-500 rounded-full transition-all duration-500 ease-in-out" style="width: 0%;"></div>
+            </div>
+            <p id="progress-text" class="text-sm text-gray-500 mt-2 text-right">0 / 20</p>
+        </div>
+        <div id="question-container"></div>
+        <div class="flex justify-between mt-8">
+            <button id="prev-btn" class="btn btn-secondary hidden">上一题</button>
+            <button id="next-btn" class="btn btn-primary" disabled>下一题</button>
+        </div>
+    </div>
+
+    <div id="result-page" class="hidden text-center">
+        <h2 class="text-3xl font-bold text-green-600 mb-2">你的安全角色是...</h2>
+        <div id="result-type" class="text-5xl md:text-6xl font-extrabold text-green-700 mb-4 animate-bounce"></div>
+        <div id="result-role" class="text-2xl font-semibold text-gray-800 mb-6"></div>
+        <div id="result-details" class="text-left bg-gray-50 p-6 rounded-xl border border-gray-200"></div>
+        <button id="restart-btn" class="btn btn-primary mt-8 px-8 py-3">重新测试</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const startPage = document.getElementById('start-page');
+        const testPage = document.getElementById('test-page');
+        const resultPage = document.getElementById('result-page');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const questionContainer = document.getElementById('question-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const resultType = document.getElementById('result-type');
+        const resultRole = document.getElementById('result-role');
+        const resultDetails = document.getElementById('result-details');
+        
+        let currentQuestionIndex = 0;
+        let userAnswers = {}; // Store user's choices { questionIndex: 'A' or 'P' }
+
+        const questions = [
+            // 维度一：安全意识倾向 (A/P)
+            {
+                text: "如果你收到一条陌生号码发来的取件码链接短信，你的第一反应是？",
+                options: {
+                    A: "直接删除，并会提醒家人警惕。",
+                    B: "首先点开查看是否是取件码，然后问家人/朋友或去购物平台查询这条短信是不是真的。"
+                },
+                dimension: 'awareness'
+            },
+            {
+                text: "每次住酒店，你会特意留意逃生通道的位置吗？",
+                options: {
+                    A: "会主动寻找逃生路线图，确认最近的出口在哪里。",
+                    B: "看到酒店的提示牌时会顺便看一眼。"
+                },
+                dimension: 'awareness'
+            },
+            {
+                text: "校园二手交易群内，有人低价转售二手平板电脑，要求先付50%定金再发货，不支持平台担保交易，但对方提供学生证照片，请问你会怎么做？",
+                options: {
+                    A: "明确拒绝先付定金，要求走平台担保交易。",
+                    B: "看到对方有学生证照片，在进一步与对方核对学生证上的信息之后，与他进行线下交易。"
+                },
+                dimension: 'awareness'
+            },
+            {
+                text: "假如辅导员发布了官方贷款通知，你有相关的意愿，这时有一位群里的同学申请添加好友，自称是老师的临时学生助理，说你的贷款申请需要统一收集办理打款银行卡账号的50r押金，押金会存入该打款银行卡账号，只是需要押金开通该账户，你觉得这是真的吗？",
+                options: {
+                    A: "不是真的，学校只会使用统一的农行卡为大家进行转账。",
+                    B: "是真的，因为电话卡就有预存一定金额进行开户的手续流程。"
+                },
+                dimension: 'awareness'
+            },
+            {
+                text: "假如你在小红书看到心怡的演唱会门票，并且持有学生证可以打折购买，你会怎么做？",
+                options: {
+                    A: "部分演唱会提供学生优惠，但我还是选择从官方渠道购买。",
+                    B: "查询到该演唱会确实有学生优惠，选择联系该小红书博主进行优惠购买。"
+                },
+                dimension: 'awareness'
+            },
+
+            // 维度二：安全行为能力 (S/B)
+            {
+                text: "假如家里的油锅突然着火，你会怎么处理？",
+                options: {
+                    A: "用扫帚、抹布等进行扑打熄灭。",
+                    B: "立刻用锅盖盖住，隔绝空气。"
+                },
+                dimension: 'skill'
+            },
+            {
+                text: "假设某寝室最大承载功率为800瓦，你会同时开启5台电脑、1台空调、1个热水壶、1个冰箱、1个洗衣机吗？",
+                options: {
+                    A: "会，因为经过估算应该不会超过最大限制功率。",
+                    B: "不会，因为会发生电路发热绝缘层融化，进而导致火灾。"
+                },
+                dimension: 'skill'
+            },
+            {
+                text: "遇到地震，你正在室内，第一反应是？",
+                options: {
+                    A: "躲在窗户、阳台、外墙边。",
+                    B: "躲到承重墙根、餐桌、内墙角。"
+                },
+                dimension: 'skill'
+            },
+            {
+                text: "朋友问你“灭火器怎么用”，你会？",
+                options: {
+                    A: "向他说明“拔、提、握、压”的操作步骤。",
+                    B: "向他说明“提、拔、握、压”的操作步骤。"
+                },
+                dimension: 'skill'
+            },
+            {
+                text: "如果身边有人突然晕倒，你会？",
+                options: {
+                    A: "知道要拨打急救电话，但不知道如何进行任何现场急救。",
+                    B: "进行基础的急救措施，比如判断意识、呼吸，并拨打急救电话。"
+                },
+                dimension: 'skill'
+            },
+
+            // 维度三：防骗安全 (D/V)
+            {
+                text: "看到各qq群在宣传转发的“官方摄影比赛”（称可加综测，且依附的平台充值能多投票），你会？",
+                options: {
+                    A: "先找到该负责人咨询活动各项事宜，核实活动真假。",
+                    B: "积极参加，学长学姐都说曾经是有过这个活动的。"
+                },
+                dimension: 'fraud'
+            },
+            {
+                text: "平时与你共勉学习的“英语搭子”邀你一起报英语口语课，你会？",
+                options: {
+                    A: "让搭子别着急，你想再了解核实一下该课程真假。",
+                    B: "认识搭子很久了，可以一起报名拼团有优惠。"
+                },
+                dimension: 'fraud'
+            },
+            {
+                text: "如果在校园墙上你看到别人发了个家教兼职转让，你加上对方，人家和你说你来晚一步好家教没了，但他有个家教群推给了你，这时你会？",
+                options: {
+                    A: "拒绝加入并删除好友。",
+                    B: "先向发布兼职转让的校园墙账号核实群聊真实性后再决定。"
+                },
+                dimension: 'fraud'
+            },
+            {
+                text: "假如有陌生电话说你的快递因为失误不小心导致破损了，想要给你赔偿，需要你接收一下短信，你会？",
+                options: {
+                    A: "认定是诈骗，挂断电话然后删除短信。",
+                    B: "这是对方的失误，可以按照提示获取应得的赔偿。"
+                },
+                dimension: 'fraud'
+            },
+            {
+                text: "当你的社交账号收到“你的账号涉嫌违规，请点击链接验证”的私信时，你会？",
+                options: {
+                    A: "直接忽略或举报，这是钓鱼链接。",
+                    B: "最近确实经常切换账号，账号有被封的风险，先点开链接看一看。"
+                },
+                dimension: 'fraud'
+            },
+
+            // 维度四：综合安全 (C/L)
+            {
+                text: "和刚认识的网友聊天时，对方询问你的具体工作单位、家庭住址等信息，你会怎么做？",
+                options: {
+                    A: "会委婉拒绝透露这类私人信息，只聊兴趣爱好等无关隐私的话题，避免信息泄露。",
+                    B: "可以大概告知自己的工作行业和所在城区，不会完全隐瞒但也不会完全透露。"
+                },
+                dimension: 'overall'
+            },
+            {
+                text: "你会定期清理手机里长期不用的App和聊天记录吗？",
+                options: {
+                    A: "会每月清理一次，卸载不用的App，删除冗余的聊天记录和缓存文件，既节省内存也避免信息堆积。",
+                    B: "很少特意清理，聊天记录留着还能偶尔翻看，没必要删。"
+                },
+                dimension: 'overall'
+            },
+            {
+                text: "你会如何管理手机里的各类会员账号（如视频会员、购物会员）密码？",
+                options: {
+                    A: "不同平台的会员密码设置成不同组合。",
+                    B: "为了方便记忆，多个平台共用同一组密码。"
+                },
+                dimension: 'overall'
+            },
+            {
+                text: "你发朋友圈时，会分享自己的实时位置和行程吗？",
+                options: {
+                    A: "只分享风景和美食，从不透露自己的具体位置和行程。",
+                    B: "偶尔会分享定位，或者说自己在某个商圈，但会隐藏具体地址。"
+                },
+                dimension: 'overall'
+            },
+            {
+                text: "当你看到通道内有大量杂物堆积时，你会？",
+                options: {
+                    A: "会主动向物业或相关部门反映，并协助清理。",
+                    B: "只是堆在一边没有影响行人通过，暂时先不管。",
+                },
+                dimension: 'overall'
+            }
+        ];
+
+        const types = {
+            ASDC: {
+                role: "安全标杆者",
+                description: "【主动意识+熟练能力+强防骗+重安全】：主动排查风险，熟练应对火灾/诈骗，全场景守规范，是身边人的安全参考。",
+                advice: "你几乎没有明显短板，可以承担“安全宣传”的角色，帮助身边人提升安全意识和技能。"
+            },
+            ASDL: {
+                role: "应急强手",
+                description: "【主动意识+熟练能力+强防骗+轻安全】：主动防骗、应急技能强，但日常安全偶尔疏忽（如忘关空调）。",
+                advice: "你的强项在于应急和防骗，但需要强化日常安全细节，可以设置“出门检查清单”来提醒自己。"
+            },
+            ASVC: {
+                role: "防骗待强者",
+                description: "【主动意识+熟练能力+弱防骗+重安全】：主动关注日常/消防/网络安全，应急技能强，但易被“熟人套路”。",
+                advice: "你的短板在于防骗，建议学习“复杂诈骗识别”（如核实身份、拒绝“紧急转账”），提升警惕性。"
+            },
+            ASVL: {
+                role: "主动进步者",
+                description: "【主动意识+熟练能力+弱防骗+轻安全】：主动排查风险、应急技能强，但防骗和日常安全有小疏忽。",
+                advice: "你有着很强的自我提升动力，建议先补强防骗知识，再固化日常安全习惯，系统性地提升自己。"
+            },
+            ABDC: {
+                role: "意识领先者",
+                description: "【主动意识+基础能力+强防骗+重安全】：主动关注各场景安全、防骗意识强，但应急技能不足。",
+                advice: "你的意识和防范心态都很好，但需要提升实操技能，可以关注并参加学习相关应急知识。"
+            },
+            ABDL: {
+                role: "意识扎实者",
+                description: "【主动意识+基础能力+强防骗+轻安全】：主动防骗、关注风险，但应急技能基础甚至不足、日常安全偶尔疏忽。",
+                advice: "你已经具备了不错的基础，可以从学习基础应急技能开始，再慢慢培养日常安全的细节意识。"
+            },
+            ABVC: {
+                role: "规范遵守者",
+                description: "【主动意识+基础能力+弱防骗+重安全】：严格遵守综合安全规范，但应急技能基础甚至不足、易被诈骗迷惑。",
+                advice: "你很注重规则，建议先学习防骗话术，再逐步练习应急技能，补齐短板。"
+            },
+            ABVL: {
+                role: "安全入门者",
+                description: "【主动意识+基础能力+弱防骗+轻安全】：有主动安全意识，但能力和场景表现均基础，需系统提升。",
+                advice: "你处于安全素养的起步阶段，可以从“防骗小知识+日常安全清单”开始，逐步建立起自己的安全系统。"
+            },
+            PSDC: {
+                role: "技能专家",
+                description: "【被动意识+熟练能力+强防骗+重安全】：应急技能、防骗和综合安全表现顶尖，但需提醒或已经踏入陷阱才关注风险。",
+                advice: "你的技能和规范意识都很强，但缺乏主动性，建议培养主动预判的习惯，比如每周自查一次家中隐患。"
+            },
+            PSDL: {
+                role: "技能应用者",
+                description: "【被动意识+熟练能力+强防骗+轻安全】：能识破诈骗、熟练应急，但需提醒或已经踏入陷阱才关注风险、日常安全有疏忽。",
+                advice: "你的能力毋庸置疑，但需要强化主动关注意识，可以尝试让家人定期进行“安全提问”来帮助你。"
+            },
+            PSVC: {
+                role: "综合践行者",
+                description: "【被动意识+熟练能力+弱防骗+重安全】：日常/消防/网络安全做得好、应急技能强，但需提醒或已经踏入陷阱才关注风险、易被诈骗。",
+                advice: "你有着强大的执行力，但需要培养风险预判意识和主动学习防骗知识，来弥补被动意识的不足。"
+            },
+            PSVL: {
+                role: "技能待激活者",
+                description: "【被动意识+熟练能力+弱防骗+轻安全】：应急技能熟练，但防骗弱、日常安全疏忽、意识被动，需提醒或已经踏入陷阱才关注风险。",
+                advice: "你的技能宝库需要被“激活”，可以从每天看一条安全常识开始，培养主动意识，再补强防骗和日常习惯。"
+            },
+            PBDC: {
+                role: "场景关注者",
+                description: "【被动意识+基础能力+强防骗+重安全】：防骗和综合安全规范遵守好，但需提醒或已经踏入陷阱才关注风险、应急技能基础甚至不足。",
+                advice: "你很擅长在特定场景下遵守规范，但需要提升应急技能，比如学习地震避险、溺水呼救技巧。"
+            },
+            PBDL: {
+                role: "防骗扎实者",
+                description: "【被动意识+基础能力+强防骗+轻安全】：能识别常见诈骗、遵守综合安全规范，但需提醒或已经踏入陷阱才关注风险、应急技能基础甚至不足。",
+                advice: "你的防骗能力不错，但需要先练习基础应急技能，再逐步培养主动关注意识。"
+            },
+            PBVC: {
+                role: "规范跟随者",
+                description: "【被动意识+基础能力+弱防骗+重安全】：能遵守综合安全规范，但需提醒或已经踏入陷阱才关注风险、防骗弱、应急技能基础甚至不足。",
+                advice: "你倾向于跟随规范，建议按“意识→防骗→技能”的顺序逐步提升，系统性地学习安全知识。"
+            },
+            PBVL: {
+                role: "安全待提升者",
+                description: "【被动意识+基础能力+弱防骗+轻安全】：需提醒或已经踏入陷阱才关注风险，防骗、应急技能和日常安全均需加强。",
+                advice: "你处于安全素养的起步阶段，可以从最基础的安全知识学起，比如“出门关电、不点陌生链接”这些小习惯。"
+            }
+        };
+
+        const renderQuestion = (index) => {
+            const q = questions[index];
+            if (!q) {
+                showResult();
+                return;
+            }
+
+            const currentAnswer = userAnswers[index];
+            const html = `
+                <div class="bg-white p-6 rounded-xl shadow-inner">
+                    <h3 class="text-xl md:text-2xl font-semibold mb-4 text-center text-gray-800">问题 ${index + 1} / ${questions.length}</h3>
+                    <p class="text-lg md:text-xl font-medium mb-6 leading-relaxed">${q.text}</p>
+                    <div class="grid gap-4">
+                        ${Object.keys(q.options).map(key => `
+                            <div class="option-card ${currentAnswer === key ? 'selected' : ''}" data-value="${key}">
+                                <div class="font-bold text-lg text-green-600">${key}.</div>
+                                <p class="text-gray-700 mt-1 leading-normal">${q.options[key]}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            questionContainer.innerHTML = html;
+
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                    card.classList.add('selected');
+                    userAnswers[index] = card.dataset.value;
+                    nextBtn.disabled = false;
+                });
+            });
+
+            updateProgress();
+            updateNavigation();
+        };
+
+        const updateProgress = () => {
+            const progress = (currentQuestionIndex / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `${currentQuestionIndex} / ${questions.length}`;
+            if (currentQuestionIndex === questions.length) {
+                progressText.textContent = `${questions.length} / ${questions.length}`;
+            }
+        };
+
+        const updateNavigation = () => {
+            prevBtn.classList.toggle('hidden', currentQuestionIndex === 0);
+            nextBtn.textContent = (currentQuestionIndex === questions.length - 1) ? '查看结果' : '下一题';
+            nextBtn.disabled = !userAnswers.hasOwnProperty(currentQuestionIndex);
+        };
+
+        const showResult = () => {
+            testPage.classList.add('hidden');
+            resultPage.classList.remove('hidden');
+
+            // 初始化各维度得分（统计目标字母：A/P、S/B、D/V、C/L）
+    const scores = { 
+        awareness: { A: 0, P: 0 },  // 维度1：A/P
+        skill: { S: 0, B: 0 },      // 维度2：S/B
+        fraud: { D: 0, V: 0 },      // 维度3：D/V
+        overall: { C: 0, L: 0 }     // 维度4：C/L
+    };
+    
+    
+    questions.forEach((q, index) => {
+        const answer = userAnswers[index]; // 用户选择的A或B
+        if (!answer) return; // 跳过未答题（防报错）
+
+        // 1. 第1-5题（索引0-4）：维度1（awareness）
+        if (index >= 0 && index <= 4) {
+            scores.awareness[answer === 'A' ? 'A' : 'P']++;
+        }
+        // 2. 第6-10题（索引5-9）：维度2（skill）
+        else if (index >= 5 && index <= 9) {
+            scores.skill[answer === 'A' ? 'B' : 'S']++;
+        }
+        // 3. 第11-15题（索引10-14）：维度3（fraud）
+        else if (index >= 10 && index <= 14) {
+            scores.fraud[answer === 'A' ? 'D' : 'V']++;
+        }
+        // 4. 第16-20题（索引15-19）：维度4（overall）
+        else if (index >= 15 && index <= 19) {
+            scores.overall[answer === 'A' ? 'C' : 'L']++;
+        }
+    });
+
+    // 判定各维度类型（基于映射后的得分）
+    const awarenessType = scores.awareness.A > scores.awareness.P ? 'A' : 'P';
+    const skillType = scores.skill.S > scores.skill.B ? 'S' : 'B';
+    const fraudType = scores.fraud.D > scores.fraud.V ? 'D' : 'V';
+    const overallType = scores.overall.C > scores.overall.L ? 'C' : 'L';
+
+            const finalType = `${awarenessType}${skillType}${fraudType}${overallType}`;
+            const resultData = types[finalType];
+
+            resultType.textContent = finalType;
+            resultRole.textContent = resultData.role;
+            resultDetails.innerHTML = `
+                <h3 class="text-2xl font-bold mb-3 text-green-700">核心特质分析</h3>
+                <p class="mb-4 text-gray-700 leading-relaxed">${resultData.description}</p>
+                <h3 class="text-2xl font-bold mb-3 text-green-700">提升建议</h3>
+                <p class="text-gray-700 leading-relaxed">${resultData.advice}</p>
+            `;
+        };
+
+        // 事件监听
+        startBtn.addEventListener('click', () => {
+            startPage.classList.add('hidden');
+            testPage.classList.remove('hidden');
+            renderQuestion(currentQuestionIndex);
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion(currentQuestionIndex);
+            } else {
+                showResult();
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion(currentQuestionIndex);
+            }
+        });
+
+        restartBtn.addEventListener('click', () => {
+            currentQuestionIndex = 0;
+            userAnswers = {};
+            resultPage.classList.add('hidden');
+            startPage.classList.remove('hidden');
+            nextBtn.disabled = true;
+        });
+    });
+</script>
+
+</body>
+</html>
